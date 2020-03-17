@@ -722,6 +722,8 @@ typedef RenderObjectVisitor = void Function(RenderObject child);
 /// Used by [RenderObject.invokeLayoutCallback].
 typedef LayoutCallback<T extends Constraints> = void Function(T constraints);
 
+typedef OnDirtyCallback = void Function(RenderObject r);
+
 /// A reference to the semantics tree.
 ///
 /// The framework maintains the semantics tree (used for accessibility and
@@ -2078,6 +2080,17 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     _needsCompositingBitsUpdate = false;
   }
 
+  final List<OnDirtyCallback> _onDirtyCallbacks = <OnDirtyCallback>[];
+
+  void addOnDirtyCallback(OnDirtyCallback c) {
+    _onDirtyCallbacks.add(c);
+  }
+
+  void removeOnDirtyCallback(OnDirtyCallback c) {
+    _onDirtyCallbacks.remove(c);
+  }
+
+
   /// Whether this render object's paint information is dirty.
   ///
   /// This is only set in debug mode. In general, render objects should not need
@@ -2126,6 +2139,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(owner == null || !owner!.debugDoingPaint);
     if (_needsPaint)
       return;
+    for (OnDirtyCallback c in _onDirtyCallbacks)
+      c(this);
     _needsPaint = true;
     if (isRepaintBoundary) {
       assert(() {
