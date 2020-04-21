@@ -102,6 +102,10 @@ class PaintingContext extends ClipContext {
       debugAlsoPaintedParent: debugAlsoPaintedParent,
     );
   }
+  
+  static void fuAndPaintWithContext(RenderObject child, PaintingContext childContext) {
+    child._paintWithContext(childContext, Offset.zero);
+  }
 
   static void _repaintCompositedChild(
     RenderObject child, {
@@ -1644,6 +1648,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       _debugMutationsLocked = false;
       return true;
     }());
+    for (OnDirtyCallback c in _onLayoutCallbacks)
+      c(this);
     _needsLayout = false;
     markNeedsPaint();
   }
@@ -1791,6 +1797,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       _debugMutationsLocked = false;
       return true;
     }());
+    for (OnDirtyCallback c in _onLayoutCallbacks)
+      c(this);
     _needsLayout = false;
     markNeedsPaint();
 
@@ -2080,14 +2088,24 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     _needsCompositingBitsUpdate = false;
   }
 
-  final List<OnDirtyCallback> _onDirtyCallbacks = <OnDirtyCallback>[];
+  final List<OnDirtyCallback> _onPaintCallbacks = <OnDirtyCallback>[];
 
-  void addOnDirtyCallback(OnDirtyCallback c) {
-    _onDirtyCallbacks.add(c);
+  void addOnPaintCallback(OnDirtyCallback c) {
+    _onPaintCallbacks.add(c);
   }
 
-  void removeOnDirtyCallback(OnDirtyCallback c) {
-    _onDirtyCallbacks.remove(c);
+  void removeOnPaintCallback(OnDirtyCallback c) {
+    _onPaintCallbacks.remove(c);
+  }
+
+  final List<OnDirtyCallback> _onLayoutCallbacks = <OnDirtyCallback>[];
+
+  void addOnLayoutCallback(OnDirtyCallback c) {
+    _onLayoutCallbacks.add(c);
+  }
+
+  void removeOnLayoutCallback(OnDirtyCallback c) {
+    _onLayoutCallbacks.remove(c);
   }
 
 
@@ -2139,8 +2157,6 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
     assert(owner == null || !owner!.debugDoingPaint);
     if (_needsPaint)
       return;
-    for (OnDirtyCallback c in _onDirtyCallbacks)
-      c(this);
     _needsPaint = true;
     if (isRepaintBoundary) {
       assert(() {
@@ -2321,6 +2337,8 @@ abstract class RenderObject extends AbstractNode with DiagnosticableTreeMixin im
       assert(!isRepaintBoundary || _layer != null);
       return true;
     }());
+    for (OnDirtyCallback c in _onPaintCallbacks)
+      c(this);
     _needsPaint = false;
     try {
       paint(context, offset);
